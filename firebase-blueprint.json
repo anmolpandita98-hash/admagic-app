@@ -1,0 +1,331 @@
+{
+  "entities": {
+    "SavedReport": {
+      "title": "SavedReport",
+      "description": "User-defined report configurations for quick access and tracking.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "reportType": { "type": "string" },
+        "filters": { "type": "object" },
+        "groupBy": { "type": "array", "items": { "type": "string" } },
+        "metrics": { "type": "array", "items": { "type": "string" } },
+        "dateRange": { "type": "object" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "reportType", "createdBy"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Stores user profile information and integration tokens.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "googleAdsToken": { "type": "string" },
+        "metaAdsToken": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Campaign": {
+      "title": "Campaign",
+      "description": "Represents an advertising campaign with full Trackier-like configuration.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "advertiser_id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "kpi_notes": { "type": "string" },
+        "campaign_url": { "type": "string" },
+        "advertiser_click_id_param": { "type": "string" },
+        "objective": { "type": "string", "enum": ["CONVERSIONS", "SALE", "LEADS", "IMPRESSIONS", "CLICKS"] },
+        "preview_url": { "type": "string" },
+        "allowed_traffic_channels": { "type": "array", "items": { "type": "string" } },
+        "primary_tracking_domain": { "type": "string" },
+        "require_terms": { "type": "boolean" },
+        "category_id": { "type": "string" },
+        "status": { "type": "string", "enum": ["ACTIVE", "PAUSED", "DELETED"] },
+        "app_id": { "type": "string" },
+        "app_name": { "type": "string" },
+        "package_name": { "type": "string" },
+        "external_offer_id": { "type": "string" },
+        "thumbnail_url": { "type": "string" },
+        "revenue_method": { "type": "string", "enum": ["DEFAULT", "TIER_BASED"] },
+        "currency": { "type": "string" },
+        "revenue": { "type": "number" },
+        "payout": { "type": "number" },
+        "geo_coverage": { "type": "array", "items": { "type": "string" } },
+        "default_goal": { "type": "object" },
+        "additional_goals": { "type": "array" },
+        "redirect_type": { "type": "string" },
+        "conversion_status_after_hold": { "type": "string" },
+        "allowed_devices": { "type": "array" },
+        "allowed_operating_systems": { "type": "array" },
+        "deep_link_enabled": { "type": "boolean" },
+        "unsubscribe_url": { "type": "string" },
+        "targeting_rules": { "type": "array" },
+        "caps": { "type": "array" },
+        "start_datetime": { "type": "string", "format": "date-time" },
+        "end_datetime": { "type": "string", "format": "date-time" },
+        "scheduled_status_changes": { "type": "array" },
+        "time_targeting": { "type": "object" },
+        "lastUpdated": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "advertiser_id", "campaign_url", "createdBy"]
+    },
+    "optimizations": {
+      "title": "AdOptimization",
+      "description": "AI-driven optimization recommendations.",
+      "type": "object",
+      "properties": {
+        "campaignId": { "type": "string" },
+        "recommendation": { "type": "string" },
+        "predictedImpact": { "type": "string" },
+        "applied": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Coupon": {
+      "title": "Coupon",
+      "description": "Promotional codes for campaigns.",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "campaignId": { "type": "string" },
+        "type": { "type": "string", "enum": ["GENERIC", "EXCLUSIVE", "UNIQUE"] },
+        "status": { "type": "string" },
+        "payoutOverride": { "type": "number" },
+        "createdBy": { "type": "string" }
+      }
+    },
+    "Goal": {
+      "title": "Goal",
+      "description": "Global conversion goals defined at the account level to be reused across campaigns.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "code": { "type": "string" },
+        "description": { "type": "string" },
+        "default_visibility": { "type": "string", "enum": ["PUBLIC", "PRIVATE"] },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "code", "createdBy"]
+    },
+    "TeamMember": {
+      "title": "TeamMember",
+      "description": "Users associated with the admin account for collaborative management.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["ADMIN", "MANAGER", "ACCOUNT_MANAGER"] },
+        "status": { "type": "string", "enum": ["ACTIVE", "INVITED", "DISABLED"] },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "role", "createdBy"]
+    },
+    "ApprovalRequest": {
+      "title": "ApprovalRequest",
+      "description": "Centralized request queue for publishers, campaigns, and financial operations.",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["PUBLISHER_SIGNUP", "CAMPAIGN_ACCESS", "PAYOUT_REQUEST", "CREATIVE_APPROVAL"] },
+        "requesterId": { "type": "string" },
+        "requesterName": { "type": "string" },
+        "details": { "type": "object" },
+        "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+        "reviewedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["type", "requesterId", "status", "createdAt"]
+    },
+    "Creative": {
+      "title": "Creative",
+      "description": "Ad assets like banners or videos.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "url": { "type": "string" },
+        "type": { "type": "string", "enum": ["Banner", "Video", "Native"] },
+        "campaignId": { "type": "string" },
+        "createdBy": { "type": "string" }
+      }
+    },
+    "SmartLink": {
+      "title": "SmartLink",
+      "description": "Intelligent rotational traffic nodes.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "smartLinkEvent": { "type": "string" },
+        "status": { "type": "string" },
+        "selectedTags": { "type": "array" },
+        "kickOutLogic": { "type": "boolean" },
+        "createdBy": { "type": "string" }
+      }
+    },
+    "Click": {
+      "title": "Click",
+      "description": "Historical record of incoming traffic events.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "campaignId": { "type": "string" },
+        "affiliateId": { "type": "string" },
+        "geo": { "type": "string" },
+        "device": { "type": "string" },
+        "ip": { "type": "string" },
+        "ua": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["Allowed", "Blocked"] }
+      }
+    },
+    "Conversion": {
+      "title": "Conversion",
+      "description": "Verified marketing objectives and payouts.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "clickId": { "type": "string" },
+        "campaignId": { "type": "string" },
+        "revenue": { "type": "number" },
+        "payout": { "type": "number" },
+        "status": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
+    },
+    "AntiFraudLog": {
+      "title": "AntiFraudLog",
+      "description": "Records of suspicious activity detections.",
+      "type": "object",
+      "properties": {
+        "ip": { "type": "string" },
+        "type": { "type": "string" },
+        "severity": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Integration": {
+      "title": "Integration",
+      "description": "Third-party advertiser or platform integrations.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["S2S", "Pixel", "SDK", "Native", "Postback", "API"] },
+        "status": { "type": "string" },
+        "config": { "type": "object" },
+        "createdBy": { "type": "string" }
+      }
+    },
+    "WorkflowRule": {
+      "title": "WorkflowRule",
+      "description": "Automated campaign management rules.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "condition": { "type": "string" },
+        "action": { "type": "string" },
+        "status": { "type": "string" },
+        "createdBy": { "type": "string" }
+      }
+    },
+    "FilterRule": {
+      "title": "FilterRule",
+      "description": "Advanced traffic filtering logic.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "priority": { "type": "integer" },
+        "criteria": { "type": "object" },
+        "action": { "type": "string", "enum": ["Allow", "Block", "Redirect"] },
+        "status": { "type": "string" }
+      }
+    },
+    "ImportJob": {
+      "title": "ImportJob",
+      "description": "Historical record of data import operations.",
+      "type": "object",
+      "properties": {
+        "fileName": { "type": "string" },
+        "rowCount": { "type": "integer" },
+        "status": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "UserProfile",
+      "description": "User profile and settings."
+    },
+    "/campaigns/{campaignId}": {
+      "schema": "Campaign",
+      "description": "All advertising campaigns."
+    },
+    "/coupons/{id}": {
+      "schema": "Coupon",
+      "description": "Voucher codes."
+    },
+    "/goals/{id}": {
+      "schema": "Goal",
+      "description": "Global objectives."
+    },
+    "/team_members/{id}": {
+      "schema": "TeamMember",
+      "description": "Collaboration team."
+    },
+    "/approvals/{id}": {
+      "schema": "ApprovalRequest",
+      "description": "System requests queue."
+    },
+    "/creatives/{id}": {
+      "schema": "Creative",
+      "description": "Ad assets."
+    },
+    "/smartlinks/{id}": {
+      "schema": "SmartLink",
+      "description": "Rotational link nodes."
+    },
+    "/clicks/{id}": {
+      "schema": "Click",
+      "description": "Raw traffic logs."
+    },
+    "/conversions/{id}": {
+      "schema": "Conversion",
+      "description": "Priced outcomes."
+    },
+    "/antifraud_logs/{id}": {
+      "schema": "AntiFraudLog",
+      "description": "Security alarms."
+    },
+    "/integrations/{id}": {
+      "schema": "Integration",
+      "description": "Platform connectors."
+    },
+    "/workflow_rules/{id}": {
+      "schema": "WorkflowRule",
+      "description": "Automation triggers."
+    },
+    "/filter_rules/{id}": {
+      "schema": "FilterRule",
+      "description": "Traffic gatekeepers."
+    },
+    "/import_jobs/{id}": {
+      "schema": "ImportJob",
+      "description": "Batch operation logs."
+    },
+    "/saved_reports/{id}": {
+      "schema": "SavedReport",
+      "description": "User stored report views."
+    }
+  }
+}
