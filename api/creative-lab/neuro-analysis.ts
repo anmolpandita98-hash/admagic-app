@@ -47,48 +47,70 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     Return ONLY the JSON object, no markdown, no explanation.`;
 
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://app.admagic.cloud',
-        'X-Title': 'AdMagic Neuro Analysis',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.0-flash-exp:free',
-        messages: [
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: prompt },
+    // Try models in order of preference
+    const models = [
+      'google/gemini-2.5-flash',
+      'google/gemini-3.5-flash',
+      'anthropic/claude-3.5-haiku',
+    ];
+
+    let lastError = '';
+    for (const model of models) {
+      try {
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://app.admagic.cloud',
+            'X-Title': 'AdMagic Neuro Analysis',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
               {
-                type: 'image_url',
-                image_url: {
-                  url: `data:${mimeType};base64,${fileData}`,
-                },
+                role: 'user',
+                content: [
+                  { type: 'text', text: prompt },
+                  {
+                    type: 'image_url',
+                    image_url: {
+                      url: `data:${mimeType};base64,${fileData}`,
+                    },
+                  },
+                ],
               },
             ],
-          },
-        ],
-        response_format: { type: 'json_object' },
-      }),
-    });
+            response_format: { type: 'json_object' },
+          }),
+        });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`OpenRouter API error ${response.status}: ${errText}`);
+        if (!response.ok) {
+          const errText = await response.text();
+          lastError = `Model ${model} failed with ${response.status}: ${errText}`;
+          console.warn(lastError);
+          continue; // try next model
+        }
+
+        const result = await response.json();
+        const content = result.choices?.[0]?.message?.content;
+
+        if (!content) {
+          lastError = `No content returned from model ${model}`;
+          continue;
+        }
+
+        const data = typeof content === 'string' ? JSON.parse(content.trim()) : content;
+        return res.status(200).json(data);
+
+      } catch (modelErr: any) {
+        lastError = modelErr.message;
+        continue;
+      }
     }
 
-    const result = await response.json();
-    const content = result.choices?.[0]?.message?.content;
-
-    if (!content) {
-      throw new Error('No content returned from OpenRouter');
-    }
-
-    const data = typeof content === 'string' ? JSON.parse(content.trim()) : content;
-    return res.status(200).json(data);
+    // All models failed
+    return res.status(500).json({ error: `All models failed. Last error: ${lastError}` });
 
   } catch (error: any) {
     console.error('Neuro-analysis failure:', error);
