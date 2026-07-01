@@ -39,12 +39,12 @@ import { motion, AnimatePresence } from "motion/react";
 export default function Layout({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const location = useLocation();
-  const [isProfileOpen, setProfileOpen] = useState(false);
+  const [isProfileOpen, setProfileOpen] = useState(false);   const [isSidebarOpen, setIsSidebarOpen] = useState(false);   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#f5f7fa]">
-      {/* Trackier Left Sidebar */}
-      <aside className="w-[260px] bg-[#1ea4d9] flex flex-col flex-shrink-0 z-40">
+      {/* Mobile backdrop overlay */}       {isSidebarOpen && <div className="fixed inset-0 bg-black/50 z-30 md:hidden" onClick={() => setIsSidebarOpen(false)} />}       {/* Trackier Left Sidebar */}
+      <aside className={`fixed md:relative inset-y-0 left-0 w-[260px] bg-[#1ea4d9] flex flex-col flex-shrink-0 z-40 transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
         <div className="h-[64px] flex items-center px-6">
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-white/20 rounded-md flex items-center justify-center">
@@ -178,9 +178,9 @@ export default function Layout({ children }: { children: ReactNode }) {
       {/* Main Container */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Header */}
-        <header className="h-[64px] bg-white border-b border-[#e2e8f0] flex items-center justify-between px-8 flex-shrink-0 z-30">
+        <header className="h-[64px] bg-white border-b border-[#e2e8f0] flex items-center justify-between px-4 md:px-8 flex-shrink-0 z-30">
           <div className="flex items-center space-x-4">
-            <button className="text-[#64748b] hover:text-[#1ea4d9]">
+            <button className="text-[#64748b] hover:text-[#1ea4d9]" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
               <Menu className="w-5 h-5" />
             </button>
             <h1 className="text-lg font-bold text-[#1e293b]">Dashboard</h1>
@@ -197,7 +197,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
             </button>
 
-            <button className="text-[#64748b] hover:text-[#1ea4d9]">
+            <button className="text-[#64748b] hover:text-[#1ea4d9]" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
               <Gift className="w-5 h-5" />
             </button>
 
@@ -253,7 +253,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         </header>
 
         {/* Dynamic Content */}
-        <main className="flex-1 p-8 overflow-y-auto">
+        <main className="flex-1 p-4 md:p-8 overflow-y-auto">
           <div className="max-w-[1600px] mx-auto">
             {children}
           </div>
