@@ -39,7 +39,8 @@ import { motion, AnimatePresence } from "motion/react";
 export default function Layout({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const location = useLocation();
-  const [isProfileOpen, setProfileOpen] = useState(false);   const [isSidebarOpen, setIsSidebarOpen] = useState(false);   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isProfileOpen, setProfileOpen] = useState(false);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#f5f7fa]">
