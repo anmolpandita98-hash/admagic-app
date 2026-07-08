@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Globe, Search, ArrowRight, Zap, ShieldCheck, Activity, MapPin, ExternalLink, RefreshCw } from "lucide-react";
-import axios from "axios";
+import { api } from "../../lib/api";
 
 export default function GlobalChecker() {
   const [url, setUrl] = useState("");
@@ -11,7 +11,7 @@ export default function GlobalChecker() {
     if (!url) return;
     setChecking(true);
     try {
-      const { data } = await axios.post("/api/automation/check-url", { url });
+      const { data } = await api.post("/api/automation/check-url", { url });
       setResults(data.results);
     } catch (e) {
       console.error(e);

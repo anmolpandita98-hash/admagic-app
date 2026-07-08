@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../firebase";
+import { api } from "../../lib/api";
 import { useAuth } from "../../AuthContext";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -102,7 +103,10 @@ export default function CampaignWizard({ onClose }: WizardProps) {
     },
 
     // Step 7: Creatives
-    creatives: [] as any[]
+    creatives: [] as any[],
+
+    // Smart Link rotation requires visibility to be stored on the campaign.
+    visibility: "Public"
   });
 
   useEffect(() => {
@@ -120,17 +124,7 @@ export default function CampaignWizard({ onClose }: WizardProps) {
   const handleSubmit = async () => {
     if (!user) return;
     try {
-      const response = await fetch('/api/campaigns', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-user-id': user.uid
-        },
-        body: JSON.stringify(formData)
-      });
-
-      if (!response.ok) throw new Error('Failed to create campaign');
-      
+      await api.post('/api/campaigns', formData);
       onClose();
       navigate('/campaigns/manage');
     } catch (e) {

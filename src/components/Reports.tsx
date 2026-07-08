@@ -33,6 +33,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { useParams, useNavigate } from "react-router-dom";
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
+import { api } from "../lib/api";
 import { useAuth } from "../AuthContext";
 
 // --- Constants ---
@@ -288,9 +289,42 @@ export default function Reports() {
 
   // Configuration State
   const [groupBy, setGroupBy] = useState<string[]>(["campaign"]);
-  const [selectedMetrics, setSelectedMetrics] = useState<string[]>(["clicks", "unique_clicks", "approved_conversions", "revenue", "payout", "profit", "cr"]);
+  // Only metrics the backend actually computes. unique_clicks/impressions/
+  // rejected_clicks aren't available from the aggregate endpoints, so they're
+  // omitted rather than faked.
+  const [selectedMetrics, setSelectedMetrics] = useState<string[]>(["clicks", "approved_conversions", "revenue", "payout", "profit", "cr"]);
 
   const [savedReports, setSavedReports] = useState<any[]>([]);
+  const [rows, setRows] = useState<any[]>([]);
+  const [fetchError, setFetchError] = useState<string>("");
+
+  // Report groupings the backend supports today. Others render a "coming soon"
+  // state instead of fabricated rows.
+  const SUPPORTED_TYPES: Record<string, "campaign" | "date"> = {
+    campaign: "campaign",
+    daily: "date"
+  };
+  const backendGroupBy = SUPPORTED_TYPES[type];
+  const primaryDim = backendGroupBy === "date" ? "date" : "campaign";
+
+  // Map the date-range selector to a UTC [from, to] window.
+  const rangeToWindow = (range: string) => {
+    const now = new Date();
+    const to = now.toISOString();
+    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    if (range === "Yesterday") {
+      const y = new Date(start.getTime() - 24 * 60 * 60 * 1000);
+      return { from: y.toISOString(), to: start.toISOString() };
+    }
+    if (range === "Last 7 Days") {
+      return { from: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(), to };
+    }
+    if (range === "This Month" || range === "MTD") {
+      return { from: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString(), to };
+    }
+    // Default: Today
+    return { from: start.toISOString(), to };
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -328,15 +362,43 @@ export default function Reports() {
     }
   };
 
-  const MOCK_DATA = useMemo(() => {
-     const base = [
-        { campaign: "Dyson V15 Sweeps", campaign_id: "772", publisher: "AppNexus Direct", approved_conversions: 42, clicks: 1240, unique_clicks: 1100, revenue: 1240, payout: 850, profit: 390, cr: 3.38, impressions: 45000, rejected_clicks: 12, goal: "Registration", country: "US", device: "Desktop" },
-        { campaign: "Hulu Subscription Plan", campaign_id: "812", publisher: "MGID UK", approved_conversions: 88, clicks: 5600, unique_clicks: 5200, revenue: 2100, payout: 1400, profit: 700, cr: 1.57, impressions: 210000, rejected_clicks: 45, goal: "Sale", country: "GB", device: "Mobile" },
-        { campaign: "BetterHelp Therapy", campaign_id: "904", publisher: "PropellerAds", approved_conversions: 122, clicks: 880, unique_clicks: 860, revenue: 610, payout: 400, profit: 210, cr: 13.8, impressions: 12000, rejected_clicks: 2, goal: "Sign Up", country: "CA", device: "Tablet" },
-        { campaign: "VPN Secure VPN+", campaign_id: "349", publisher: "MGID UK", approved_conversions: 15, clicks: 230, unique_clicks: 220, revenue: 90, payout: 45, profit: 45, cr: 6.52, impressions: 5600, rejected_clicks: 5, goal: "Install", country: "DE", device: "Mobile" },
-     ];
-     return base;
-  }, []);
+  // Fetch real breakdown data for supported groupings.
+  useEffect(() => {
+    if (!user) return;
+    if (!backendGroupBy) { setRows([]); setFetchError(""); return; }
+    let active = true;
+    (async () => {
+      setLoading(true);
+      setFetchError("");
+      try {
+        const { from, to } = rangeToWindow(dateRange);
+        const { data } = await api.get("/api/reports/breakdown", {
+          params: { groupBy: backendGroupBy, from, to }
+        });
+        if (active) setRows((data && data.rows) || []);
+      } catch (e: any) {
+        console.error("Failed to load report breakdown:", e);
+        if (active) {
+          setRows([]);
+          setFetchError(e?.response?.data?.error || "Failed to load report data.");
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [user, backendGroupBy, dateRange, type]);
+
+  const totals = useMemo(() => {
+    return rows.reduce((acc: any, r: any) => {
+      acc.clicks += r.clicks || 0;
+      acc.approved_conversions += r.approved_conversions || 0;
+      acc.revenue += r.revenue || 0;
+      acc.payout += r.payout || 0;
+      acc.profit += r.profit || 0;
+      return acc;
+    }, { clicks: 0, approved_conversions: 0, revenue: 0, payout: 0, profit: 0 });
+  }, [rows]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
@@ -481,14 +543,12 @@ export default function Reports() {
            <table className="trackier-table !border-0">
              <thead>
                 <tr className="bg-[#f8fafc]">
-                   {groupBy.map(id => (
-                     <th key={id} className="text-left py-6 px-10">
-                        <div className="flex items-center gap-1.5 group cursor-pointer">
-                           <span className="text-[10px] font-black text-[#1e293b] uppercase tracking-widest">{DIMENSIONS.find(d => d.id === id)?.label}</span>
-                           <ChevronDown className="w-3 h-3 text-[#cbd5e1] group-hover:text-[#1ea4d9] transition-colors" />
-                        </div>
-                     </th>
-                   ))}
+                   <th className="text-left py-6 px-10">
+                      <div className="flex items-center gap-1.5 group cursor-pointer">
+                         <span className="text-[10px] font-black text-[#1e293b] uppercase tracking-widest">{DIMENSIONS.find(d => d.id === primaryDim)?.label || (primaryDim === 'date' ? 'Date' : 'Campaign')}</span>
+                         <ChevronDown className="w-3 h-3 text-[#cbd5e1] group-hover:text-[#1ea4d9] transition-colors" />
+                      </div>
+                   </th>
                    {selectedMetrics.map(id => (
                      <th key={id} className={`text-center py-6 px-6`}>
                         <div className="flex flex-col items-center gap-0.5">
@@ -501,16 +561,38 @@ export default function Reports() {
                 </tr>
              </thead>
              <tbody>
-                {MOCK_DATA.map((row: any, i) => (
+                {!backendGroupBy ? (
+                  <tr>
+                    <td colSpan={groupBy.length + selectedMetrics.length + 1} className="text-center py-20 text-[#94a3b8] text-sm italic">
+                      This report grouping is coming soon. Try the Campaign or Daily report.
+                    </td>
+                  </tr>
+                ) : loading ? (
+                  <tr>
+                    <td colSpan={groupBy.length + selectedMetrics.length + 1} className="text-center py-20 text-[#94a3b8] text-sm">
+                      Loading report data...
+                    </td>
+                  </tr>
+                ) : fetchError ? (
+                  <tr>
+                    <td colSpan={groupBy.length + selectedMetrics.length + 1} className="text-center py-20 text-red-500 text-sm">
+                      {fetchError}
+                    </td>
+                  </tr>
+                ) : rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={groupBy.length + selectedMetrics.length + 1} className="text-center py-20 text-[#94a3b8] text-sm italic">
+                      No data in this window yet. Send traffic to your campaigns to populate reports.
+                    </td>
+                  </tr>
+                ) : rows.map((row: any, i) => (
                   <tr key={i} className="group hover:bg-[#f0f9ff]/40 transition-all border-b border-[#f1f5f9] last:border-0 cursor-default">
-                     {groupBy.map(id => (
-                       <td key={id} className="py-5 px-10">
-                          <div className="flex items-center gap-3">
-                             <div className="w-2 h-2 rounded-full bg-blue-100 border border-[#1ea4d9]/30"></div>
-                             <span className="text-xs font-black text-[#1e293b]">{row[id]}</span>
-                          </div>
-                       </td>
-                     ))}
+                     <td className="py-5 px-10">
+                        <div className="flex items-center gap-3">
+                           <div className="w-2 h-2 rounded-full bg-blue-100 border border-[#1ea4d9]/30"></div>
+                           <span className="text-xs font-black text-[#1e293b]">{row[primaryDim] || "(direct)"}</span>
+                        </div>
+                     </td>
                      {selectedMetrics.map(id => {
                         const val = row[id];
                         const colorMap: any = {
@@ -522,8 +604,8 @@ export default function Reports() {
                         };
                         return (
                           <td key={id} className={`text-center py-5 px-6 text-xs text-[#64748b] ${colorMap[id] || ''}`}>
-                             {typeof val === 'number' ? (id.includes('revenue') || id.includes('payout') || id.includes('profit') ? `$${val.toFixed(2)}` : val.toLocaleString()) : val}
-                             {id === 'cr' && '%'}
+                             {typeof val === 'number' ? (id.includes('revenue') || id.includes('payout') || id.includes('profit') ? `$${val.toFixed(2)}` : (id === 'cr' ? val.toFixed(2) : val.toLocaleString())) : (val ?? '—')}
+                             {id === 'cr' && typeof val === 'number' && '%'}
                           </td>
                         );
                      })}
@@ -535,23 +617,31 @@ export default function Reports() {
                   </tr>
                 ))}
              </tbody>
+             {backendGroupBy && rows.length > 0 && (
              <tfoot className="border-t border-[#e2e8f0]">
                 <tr className="bg-[#f8fafc]/50">
-                   <td colSpan={groupBy.length} className="py-6 px-10">
-                      <span className="text-[10px] font-black text-[#64748b] uppercase tracking-widest">Aggregate Results (4 Entries)</span>
+                   <td className="py-6 px-10">
+                      <span className="text-[10px] font-black text-[#64748b] uppercase tracking-widest">Aggregate Results ({rows.length} Entries)</span>
                    </td>
                    {selectedMetrics.map(id => {
                      const totalColor = id === 'profit' ? 'text-[#1ea4d9]' : (id.includes('revenue') ? 'text-green-600' : 'text-[#64748b]');
+                     let display = '—';
+                     if (id === 'clicks') display = totals.clicks.toLocaleString();
+                     else if (id === 'approved_conversions') display = totals.approved_conversions.toLocaleString();
+                     else if (id === 'revenue') display = `$${totals.revenue.toFixed(2)}`;
+                     else if (id === 'payout') display = `$${totals.payout.toFixed(2)}`;
+                     else if (id === 'profit') display = `$${totals.profit.toFixed(2)}`;
+                     else if (id === 'cr') display = totals.clicks > 0 ? `${((totals.approved_conversions / totals.clicks) * 100).toFixed(2)}%` : '0%';
                      return (
                         <td key={id} className={`text-center py-6 px-6 text-[13px] font-black ${totalColor}`}>
-                           {/* Simplified sums */}
-                           { (id === 'approved_conversions' ? '267' : (id === 'revenue' ? '$4,050.00' : (id === 'profit' ? '$1,345.00' : '---')))}
+                           {display}
                         </td>
                      );
                    })}
                    <td></td>
                 </tr>
              </tfoot>
+             )}
            </table>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Zap, Plus, Trash2, ArrowRight, Activity, Play, Pause, Cpu } from "lucide-react";
-import axios from "axios";
+import { api } from "../../lib/api";
 
 interface Workflow {
   id: string;
@@ -22,7 +22,7 @@ export default function Workflows() {
 
   const fetchWorkflows = async () => {
     try {
-      const { data } = await axios.get("/api/automation/workflows");
+      const { data } = await api.get("/api/automation/workflows");
       setWorkflows(data);
     } catch (e) {
       console.error(e);
@@ -33,7 +33,7 @@ export default function Workflows() {
 
   const handleAddWorkflow = async () => {
     try {
-      await axios.post("/api/automation/workflows", newWorkflow);
+      await api.post("/api/automation/workflows", newWorkflow);
       setShowAddModal(false);
       fetchWorkflows();
     } catch (e) {

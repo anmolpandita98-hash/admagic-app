@@ -31,6 +31,7 @@ export default function TrackingLink() {
   });
 
   const [generatedLink, setGeneratedLink] = useState("");
+  const [postbackLink, setPostbackLink] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -47,20 +48,26 @@ export default function TrackingLink() {
 
   useEffect(() => {
     if (config.campaignId) {
-      const baseUrl = `https://admagic.track/v1/click`;
+      const origin = window.location.origin;
       const params = new URLSearchParams();
       params.append("cmp", config.campaignId);
       if (config.publisherId) params.append("aff", config.publisherId);
-      params.append("clk", config.clickId);
       if (config.p1) params.append("p1", config.p1);
       if (config.p2) params.append("p2", config.p2);
       if (config.couponCode) params.append("coupon", config.couponCode);
-      
-      setGeneratedLink(`${baseUrl}?${params.toString()}`);
+
+      setGeneratedLink(`${origin}/api/track/click?${params.toString()}`);
+
+      // Build the S2S postback URL, appending the campaign's postback token so
+      // the advertiser's server-to-server call passes token verification.
+      const camp = campaigns.find((c: any) => c.id === config.campaignId);
+      const token = camp?.postback_token ? `&token=${camp.postback_token}` : "";
+      setPostbackLink(`${origin}/api/track/postback?click_id={click_id}&rev={revenue}${token}`);
     } else {
       setGeneratedLink("");
+      setPostbackLink("");
     }
-  }, [config]);
+  }, [config, campaigns]);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(generatedLink);
@@ -215,6 +222,21 @@ export default function TrackingLink() {
                 <span className="text-[10px] font-bold text-[#64748b] uppercase">Pixel Firing</span>
                 <span className="text-[10px] font-bold text-green-600">ACTIVE</span>
               </div>
+              {postbackLink && (
+                <div className="p-3 bg-[#f8fafc] rounded border border-[#f1f5f9]">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold text-[#64748b] uppercase">S2S Postback URL</span>
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(postbackLink); alert("Postback URL copied."); }}
+                      className="text-[10px] font-bold text-[#1ea4d9] hover:underline"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <p className="text-[10px] font-mono text-[#1e293b] break-all leading-relaxed">{postbackLink}</p>
+                  <p className="text-[9px] text-[#94a3b8] mt-2 italic">Replace {"{click_id}"} and {"{revenue}"} with the advertiser's real values. The token authenticates the conversion.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

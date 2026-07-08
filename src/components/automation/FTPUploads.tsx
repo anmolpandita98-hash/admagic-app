@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { HelpCircle, Terminal, Server, Key, Plus, Trash2, CheckCircle, AlertTriangle, RefreshCw } from "lucide-react";
 
-import axios from "axios";
+import { api } from "../../lib/api";
 
 export default function FTPUploads() {
   const [nodes, setNodes] = useState<any[]>([]);
@@ -16,7 +16,7 @@ export default function FTPUploads() {
   const fetchNodes = async () => {
     try {
       // Re-using integrations endpoint or hypothetical ftp one
-      const { data } = await axios.get("/api/automation/integrations");
+      const { data } = await api.get("/api/automation/integrations");
       setNodes(data.filter((i: any) => i.type === "FTP" || i.type === "SFTP"));
     } catch (e) {
       console.error(e);
@@ -27,7 +27,7 @@ export default function FTPUploads() {
 
   const handleAddNode = async () => {
     try {
-      await axios.post("/api/automation/integrations", { 
+      await api.post("/api/automation/integrations", { 
         name: newNode.host, 
         type: newNode.port === 22 ? "SFTP" : "FTP",
         config: newNode,

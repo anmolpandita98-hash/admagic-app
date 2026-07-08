@@ -2,35 +2,30 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // ===============================================================
-    // Assumed Data Model
+    // Ownership model
     // ===============================================================
+    // Every owner-scoped collection stores `createdBy: <uid>`. A document is
+    // readable/writable only by its owner. List queries must include
+    // where("createdBy","==",uid) or Firestore rejects the whole query.
     //
-    // Collection: users
-    // Fields: uid, email, displayName, googleAdsToken, metaAdsToken, createdAt
-    //
-    // Collection: campaigns
-    // Fields: id, name, platform, status, budget, spent, clicks, conversions, lastUpdated, createdBy
-    //
-    // Collection: optimizations
-    // Fields: campaignId, recommendation, predictedImpact, applied, createdAt
-    //
+    // Server-only collections (written by the Admin SDK, which bypasses rules)
+    // have NO match block on purpose: default-deny keeps them client-inaccessible.
+    // Do not add rules for: clicks, conversions, conversion_reports,
+    // antifraud_logs, settings, integrations, ecommerce_nodes, workflow_rules,
+    // filter_rules, import_jobs, alerts.
     // ===============================================================
 
-    // Helper Functions
-    function isAuthenticated() {
+    function isSignedIn() {
       return request.auth != null;
     }
-    
     function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+      return isSignedIn() && request.auth.uid == userId;
     }
-
-    function isDocOwner() {
-      return isAuthenticated() && request.auth.uid == resource.data.createdBy;
+    function ownsExisting() {
+      return isSignedIn() && resource.data.createdBy == request.auth.uid;
     }
-
-    function isUserDocOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+    function ownsIncoming() {
+      return isSignedIn() && request.resource.data.createdBy == request.auth.uid;
     }
 
     function isValidUser(data) {
@@ -40,31 +35,109 @@ service cloud.firestore {
              data.email.size() < 255;
     }
 
-    function isValidCampaign(data) {
-      return data.keys().hasAll(['name', 'platform', 'budget', 'createdBy']) &&
-             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
-             data.platform in ['Google', 'Meta'] &&
-             data.budget is number && data.budget >= 0 &&
-             data.createdBy == request.auth.uid;
-    }
-
-    // Rules
+    // --- users: each user owns their own doc keyed by uid ---
     match /users/{userId} {
       allow read: if isOwner(userId);
       allow create: if isOwner(userId) && isValidUser(request.resource.data);
       allow update: if isOwner(userId) && isValidUser(request.resource.data);
     }
 
-    match /campaigns/{campaignId} {
-      allow read: if isAuthenticated() && (resource == null || resource.data.createdBy == request.auth.uid);
-      allow create: if isAuthenticated() && isValidCampaign(request.resource.data);
-      allow update: if isAuthenticated() && resource.data.createdBy == request.auth.uid && isValidCampaign(request.resource.data);
-      allow delete: if isAuthenticated() && resource.data.createdBy == request.auth.uid;
+    // --- campaigns: owner-scoped; owner cannot be reassigned on update ---
+    match /campaigns/{id} {
+      allow read: if ownsExisting();
+      allow create: if ownsIncoming()
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0;
+      allow update: if ownsExisting()
+        && request.resource.data.createdBy == resource.data.createdBy;
+      allow delete: if ownsExisting();
     }
 
+    // --- advertisers ---
+    match /advertisers/{id} {
+      allow read: if ownsExisting();
+      allow create: if ownsIncoming();
+      allow update: if ownsExisting()
+        && request.resource.data.createdBy == resource.data.createdBy;
+      allow delete: if ownsExisting();
+    }
+
+    // --- publishers ---
+    match /publishers/{id} {
+      allow read: if ownsExisting();
+      allow create: if ownsIncoming();
+      allow update: if ownsExisting()
+        && request.resource.data.createdBy == resource.data.createdBy;
+      allow delete: if ownsExisting();
+    }
+
+    // --- smartlinks ---
+    match /smartlinks/{id} {
+      allow read: if ownsExisting();
+      allow create: if ownsIncoming();
+      allow update: if ownsExisting()
+        && request.resource.data.createdBy == resource.data.createdBy;
+      allow delete: if ownsExisting();
+    }
+
+    // --- saved_reports ---
+    match /saved_reports/{id} {
+      allow read: if ownsExisting();
+      allow create: if ownsIncoming();
+      allow update: if ownsExisting()
+        && request.resource.data.createdBy == resource.data.createdBy;
+      allow delete: if ownsExisting();
+    }
+
+    // --- team_members ---
+    match /team_members/{id} {
+      allow read: if ownsExisting();
+      allow create: if ownsIncoming();
+      allow update: if ownsExisting()
+        && request.resource.data.createdBy == resource.data.createdBy;
+      allow delete: if ownsExisting();
+    }
+
+    // --- goals ---
+    match /goals/{id} {
+      allow read: if ownsExisting();
+      allow create: if ownsIncoming();
+      allow update: if ownsExisting()
+        && request.resource.data.createdBy == resource.data.createdBy;
+      allow delete: if ownsExisting();
+    }
+
+    // --- creatives ---
+    match /creatives/{id} {
+      allow read: if ownsExisting();
+      allow create: if ownsIncoming();
+      allow update: if ownsExisting()
+        && request.resource.data.createdBy == resource.data.createdBy;
+      allow delete: if ownsExisting();
+    }
+
+    // --- coupons ---
+    match /coupons/{id} {
+      allow read: if ownsExisting();
+      allow create: if ownsIncoming();
+      allow update: if ownsExisting()
+        && request.resource.data.createdBy == resource.data.createdBy;
+      allow delete: if ownsExisting();
+    }
+
+    // --- approvals ---
+    match /approvals/{id} {
+      allow read: if ownsExisting();
+      allow create: if ownsIncoming();
+      allow update: if ownsExisting()
+        && request.resource.data.createdBy == resource.data.createdBy;
+      allow delete: if ownsExisting();
+    }
+
+    // --- optimizations (left as-is from prior version) ---
     match /optimizations/{optId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
     }
   }
 }

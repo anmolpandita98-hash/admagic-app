@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { History, Plus, Bell, Slack, Mail, ArrowRight, Zap, Target, MoreVertical, Trash2 } from "lucide-react";
-import axios from "axios";
+import { api } from "../../lib/api";
 
 export default function Alerts() {
   const [alerts, setAlerts] = useState<any[]>([]);
@@ -14,7 +14,7 @@ export default function Alerts() {
 
   const fetchAlerts = async () => {
     try {
-      const { data } = await axios.get("/api/automation/alerts");
+      const { data } = await api.get("/api/automation/alerts");
       setAlerts(data);
     } catch (e) {
       console.error(e);
@@ -25,7 +25,7 @@ export default function Alerts() {
 
   const handleAddAlert = async () => {
     try {
-      await axios.post("/api/automation/alerts", { ...newAlert, status: "Active" });
+      await api.post("/api/automation/alerts", { ...newAlert, status: "Active" });
       setShowAddModal(false);
       fetchAlerts();
     } catch (e) {

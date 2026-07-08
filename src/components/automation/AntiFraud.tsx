@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { ShieldCheck, Zap, AlertTriangle, ShieldAlert, Cpu, Activity, Info, BarChart3 } from "lucide-react";
-import axios from "axios";
+import { api } from "../../lib/api";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function AntiFraud() {
@@ -20,7 +20,7 @@ export default function AntiFraud() {
 
   const fetchSettings = async () => {
     try {
-      const { data } = await axios.get("/api/automation/antifraud");
+      const { data } = await api.get("/api/automation/antifraud");
       setSettings(data);
     } catch (e) {
       console.error("Failed to fetch anti-fraud settings", e);
@@ -33,7 +33,7 @@ export default function AntiFraud() {
     setSettings(newSettings);
     setSaving(true);
     try {
-      await axios.post("/api/automation/antifraud", newSettings);
+      await api.post("/api/automation/antifraud", newSettings);
     } catch (e) {
       console.error("Failed to update anti-fraud settings", e);
     } finally {

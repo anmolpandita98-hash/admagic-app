@@ -1,13 +1,7 @@
 import React, { useState } from "react";
 import { Sparkles, Brain, Cpu, TrendingUp, Zap, Target, Bot, Search, RefreshCw, Wand2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { GoogleGenAI } from "@google/genai";
-
-const getApiKey = () => {
-  return localStorage.getItem("GEMINI_API_KEY") || process.env.GEMINI_API_KEY;
-};
-
-const ai = new GoogleGenAI({ apiKey: getApiKey() || "" });
+import { api } from "../lib/api";
 
 const RecommendationCard = ({ title, impact, description, platform, onApply }: any) => (
   <motion.div 
@@ -53,16 +47,11 @@ export default function AIInsights() {
   const generateInsights = async () => {
     setAnalyzing(true);
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
-        contents: "Analyze current trends in performance marketing and suggest 3 high-impact optimizations for a typical mid-market campaign.",
-        config: {
-          systemInstruction: "You are a senior ad performance analyst. Provide 3 specific, actionable ad optimization recommendations for Google or Meta ads. Return JSON format with title, impact (percentage), description, and platform.",
-          responseMimeType: "application/json"
-        }
+      const { data } = await api.post("/api/ai/insights", {
+        prompt: "Analyze current trends in performance marketing and suggest 3 high-impact optimizations for a typical mid-market campaign."
       });
-      
-      const insights = JSON.parse(response.text);
+
+      const insights = Array.isArray(data) ? data : (data.recommendations || []);
       setRecommendations(insights);
     } catch (error) {
       console.error("AI Error:", error);

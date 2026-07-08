@@ -36,9 +36,13 @@ export default function Approvals() {
 
   useEffect(() => {
     if (!user) return;
-    // Note: We don't filter by createdBy because approvals are system-wide for the account owner
-    // In a real app, this would be scoped to accountId
-    const q = query(collection(db, "approvals"), orderBy("createdAt", "desc"));
+    // Scoped to the signed-in owner so the query satisfies the owner-scoped
+    // Firestore read rule (a list query must provably return only owned docs).
+    const q = query(
+      collection(db, "approvals"),
+      where("createdBy", "==", user.uid),
+      orderBy("createdAt", "desc")
+    );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);

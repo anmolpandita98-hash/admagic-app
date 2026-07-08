@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
+import { api } from "../lib/api";
 import { useAuth } from "../AuthContext";
 import { useLocation, useNavigate } from "react-router-dom";
 import CampaignWizard from "./campaigns/CampaignWizard";
@@ -89,20 +90,28 @@ export default function Campaigns() {
     e.preventDefault();
     if (!user) return;
     try {
-      const response = await fetch('/api/campaigns', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-user-id': user.uid
-        },
-        body: JSON.stringify({
-          ...formData,
-          tracking_url: formData.url.startsWith('http') ? formData.url : `https://${formData.url}`
-        })
+      // Convert the simple form's { clicks, conversions } cap object into the
+      // canonical array shape the server and wizard both use.
+      const caps = formData.caps.conversions > 0
+        ? [{
+            type: "GROSS_CONVERSIONS",
+            scope: "CAMPAIGN",
+            timeframe: "ALL_TIME",
+            value: formData.caps.conversions,
+            timezone: "UTC",
+            over_delivery: false
+          }]
+        : [];
+
+      const { url, advertiserId, ...rest } = formData;
+      await api.post('/api/campaigns', {
+        ...rest,
+        advertiser_id: advertiserId,
+        campaign_url: url.startsWith('http') ? url : `https://${url}`,
+        geo_coverage: formData.targeting.geos,
+        caps
       });
 
-      if (!response.ok) throw new Error('Failed to deploy campaign node');
-      
       navigate('/campaigns/manage');
       setFormData({
         title: "",

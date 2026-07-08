@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Filter, Plus, ArrowUpDown, Shield, Globe, Monitor, Map, Trash2, Edit3, MoreHorizontal } from "lucide-react";
-import axios from "axios";
+import { api } from "../../lib/api";
 
 interface FilterRule {
   id: string;
@@ -23,7 +23,7 @@ export default function FilterRules() {
 
   const fetchRules = async () => {
     try {
-      const { data } = await axios.get("/api/automation/filters");
+      const { data } = await api.get("/api/automation/filters");
       setRules(data);
     } catch (e) {
       console.error(e);
@@ -34,7 +34,7 @@ export default function FilterRules() {
 
   const handleAddRule = async () => {
     try {
-      await axios.post("/api/automation/filters", { ...newRule, status: "Active" });
+      await api.post("/api/automation/filters", { ...newRule, status: "Active" });
       setShowAddModal(false);
       fetchRules();
     } catch (e) {

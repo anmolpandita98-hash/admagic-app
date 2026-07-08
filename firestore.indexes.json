@@ -1,0 +1,30 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "clicks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "campaignId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "conversions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "campaignId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "conversions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "campaignId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

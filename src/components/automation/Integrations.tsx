@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link2, Plus, CheckCircle, Globe, Settings2, Trash2, ExternalLink } from "lucide-react";
-import axios from "axios";
+import { api } from "../../lib/api";
 
 interface Integration {
   id: string;
@@ -25,7 +25,7 @@ export default function Integrations() {
 
   const fetchIntegrations = async () => {
     try {
-      const { data } = await axios.get("/api/automation/integrations");
+      const { data } = await api.get("/api/automation/integrations");
       setIntegrations(data);
     } catch (e) {
       console.error("Failed to fetch integrations", e);
@@ -44,7 +44,7 @@ export default function Integrations() {
         config: configData
       } : newIntegration;
 
-      await axios.post("/api/automation/integrations", payload);
+      await api.post("/api/automation/integrations", payload);
       setSaveSuccess(true);
       
       // Artificial delay for visual confirmation of success

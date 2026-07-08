@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { History, Upload, FileText, CheckCircle2, Clock, AlertCircle, Play, MoreVertical } from "lucide-react";
-import axios from "axios";
+import { api } from "../../lib/api";
 
 interface ImportJob {
   id: string;
@@ -21,7 +21,7 @@ export default function DataImports() {
 
   const fetchJobs = async () => {
     try {
-      const { data } = await axios.get("/api/automation/imports");
+      const { data } = await api.get("/api/automation/imports");
       setJobs(data);
     } catch (e) {
       console.error(e);
@@ -41,7 +41,7 @@ export default function DataImports() {
   const handleUpload = async (name: string) => {
     setIsUploading(true);
     try {
-      await axios.post("/api/automation/import", { fileName: name, rowCount: Math.floor(Math.random() * 5000) });
+      await api.post("/api/automation/import", { fileName: name, rowCount: Math.floor(Math.random() * 5000) });
       await fetchJobs();
     } catch (e) {
       console.error(e);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Layout as LayoutIcon, ShoppingBag, ShoppingCart, RefreshCcw, Plus, Package, Database, CheckCircle2, AlertCircle } from "lucide-react";
 
-import axios from "axios";
+import { api } from "../../lib/api";
 
 export default function Ecommerce() {
   const [storeType, setStoreType] = useState("Shopify");
@@ -15,7 +15,7 @@ export default function Ecommerce() {
 
   const fetchStores = async () => {
     try {
-      const { data } = await axios.get("/api/automation/ecommerce");
+      const { data } = await api.get("/api/automation/ecommerce");
       setStores(data);
     } catch (e) {
       console.error(e);
@@ -27,7 +27,7 @@ export default function Ecommerce() {
   const handleSync = async () => {
     setSyncing(true);
     try {
-      await axios.post("/api/automation/ecommerce", { type: storeType, domain: `${storeType.toLowerCase()}-store.myshopify.com` });
+      await api.post("/api/automation/ecommerce", { type: storeType, domain: `${storeType.toLowerCase()}-store.myshopify.com` });
       fetchStores();
       alert(`${storeType} synced successfully!`);
     } catch (e) {
