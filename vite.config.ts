@@ -11,6 +11,7 @@ export default defineConfig(() => {
     build: {
       outDir: 'dist/client',
     },
+          assetsDir: '_app',
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
