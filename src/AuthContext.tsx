@@ -1,3 +1,7 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
 import React, { useState, useEffect, createContext, useContext } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { auth, db, OperationType, handleFirestoreError } from "./firebase";
@@ -15,7 +19,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Safety timeout: if Firebase auth hasn't resolved in 5 seconds
+    // (e.g. domain not authorized or network issue), force loading to false
+    // so the app renders the login screen instead of a permanent blank screen.
+    const timeout = setTimeout(() => {
+      setLoading(false);
+    }, 5000);
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      clearTimeout(timeout);
       if (user) {
         // Ensure user document exists
         const userRef = doc(db, "users", user.uid);
@@ -39,7 +51,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      clearTimeout(timeout);
+      unsubscribe();
+    };
   }, []);
 
   return (
