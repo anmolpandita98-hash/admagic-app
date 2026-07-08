@@ -10,8 +10,10 @@ export default defineConfig(() => {
     // the compiled backend bundle at dist/server.cjs (server serves dist/client).
     build: {
       outDir: 'dist/client',
+      // Use _app instead of default 'assets' to bypass any CDN-cached
+      // broken responses for the /assets/ path.
+      assetsDir: '_app',
     },
-          assetsDir: '_app',
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
