@@ -868,7 +868,7 @@ async function startServer() {
     }
   });
 
-  // --- CREATIVE LAB: NEURO ANALYSIS ---
+  // --- CREATIVE LAB: NEURO ANALYSIS (via OpenRouter) ---
   app.post("/api/creative-lab/neuro-analysis", async (req, res) => {
     try {
       const { fileData, mimeType } = req.body;
@@ -876,50 +876,65 @@ async function startServer() {
         return res.status(400).json({ error: "Missing fileData or mimeType" });
       }
 
-      if (!process.env.GEMINI_API_KEY) {
-        return res.status(500).json({ error: "GEMINI_API_KEY is not configured on the server." });
+      const apiKey = process.env.OPENROUTER_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "OPENROUTER_API_KEY is not configured on the server." });
       }
 
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      
-      const prompt = `Analyze this ad creative using the perspective of Meta's Tribe V2 research and neuroscience principles. 
-      Tribe V2 focuses on real-time inference of brain activity, emotional valence, and stimulus response.
-      
-      Provide a detailed analysis including:
-      1. Brain Activity Index (0-100)
-      2. Emotional Resonance (Valence Score)
-      3. Attention Spikes (Key moments that trigger cognitive load)
-      4. Creative Effectiveness based on neuro-stimulus.
-      5. Specific recommendations to improve the "Brain Hook".
-      
-      Format the response as JSON with the following structure:
-      {
-        "score": number,
-        "valence": number,
-        "attentionSpikes": [{ "time": "string", "reason": "string", "intensity": number }],
-        "emotionalProfile": { "excitement": number, "trust": number, "fear": number, "joy": number },
-        "neuroInsights": ["string"],
-        "recommendations": ["string"]
-      }`;
+      const prompt = `Analyze this ad creative using the perspective of Meta's Tribe V2 research and neuroscience principles. Tribe V2 focuses on real-time inference of brain activity, emotional valence, and stimulus response.
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: {
-          parts: [
-            { text: prompt },
-            { inlineData: { data: fileData, mimeType } }
-          ]
+Provide a detailed analysis including:
+1. Brain Activity Index (0-100)
+2. Emotional Resonance (Valence Score)
+3. Attention Spikes (Key moments that trigger cognitive load)
+4. Creative Effectiveness based on neuro-stimulus.
+5. Specific recommendations to improve the "Brain Hook".
+
+Format the response as JSON with the following structure:
+{
+  "score": number,
+  "valence": number,
+  "attentionSpikes": [{ "time": "string", "reason": "string", "intensity": number }],
+  "emotionalProfile": { "excitement": number, "trust": number, "fear": number, "joy": number },
+  "neuroInsights": ["string"],
+  "recommendations": ["string"]
+}`;
+
+      const openRouterRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://app.admagic.cloud",
+          "X-Title": "AdMagic Neuro Lab"
         },
-        config: {
-          responseMimeType: "application/json"
-        }
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: prompt },
+                { type: "image_url", image_url: { url: `data:${mimeType};base64,${fileData}` } }
+              ]
+            }
+          ],
+          response_format: { type: "json_object" }
+        })
       });
 
-      if (!response || !response.text) {
-        throw new Error("No response text returned from Gemini API");
+      if (!openRouterRes.ok) {
+        const errBody = await openRouterRes.text();
+        throw new Error(`OpenRouter API error ${openRouterRes.status}: ${errBody}`);
       }
 
-      const data = JSON.parse(response.text.trim());
+      const openRouterData = await openRouterRes.json();
+      const content = openRouterData?.choices?.[0]?.message?.content;
+      if (!content) {
+        throw new Error("No content returned from OpenRouter");
+      }
+
+      const data = JSON.parse(content.trim());
       res.json(data);
     } catch (error: any) {
       console.error("Neuro-analysis server-side failure:", error);
