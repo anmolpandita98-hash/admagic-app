@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { 
-  Users, 
-  Zap, 
+import {
+  Users,
+  Zap,
   BarChart3,
   TrendingUp,
   DollarSign,
@@ -24,8 +24,10 @@ const StatCard = ({ label, icon: Icon, today, yesterday, mtd, isCurrency }: any)
         <div className="p-2 bg-[#f8fafc] rounded text-[#1ea4d9]">
           <Icon className="w-5 h-5" />
         </div>
-        <span className="text-xs font-bold text-[#64748b] tracking-wider uppercase">{label}</span>
-        <span className="text-[9px] font-bold text-[#94a3b8] uppercase">(UTC)</span>
+        <div>
+          <span className="text-xs font-bold text-[#64748b] tracking-wider uppercase">{label}</span>
+          <span className="text-[9px] font-bold text-[#94a3b8] uppercase"> (UTC)</span>
+        </div>
       </div>
       <div className="grid grid-cols-3 gap-4 flex-1">
         <div className="flex flex-col items-center">
@@ -45,16 +47,25 @@ const StatCard = ({ label, icon: Icon, today, yesterday, mtd, isCurrency }: any)
   );
 };
 
+const EMPTY_WINDOW = { clicks: 0, conversions: 0, revenue: 0, payout: 0, profit: 0 };
 const EMPTY_SUMMARY = {
-  today: { clicks: 0, conversions: 0, revenue: 0, payout: 0, profit: 0 },
-  yesterday: { clicks: 0, conversions: 0, revenue: 0, payout: 0, profit: 0 },
-  mtd: { clicks: 0, conversions: 0, revenue: 0, payout: 0, profit: 0 }
+  today: { ...EMPTY_WINDOW },
+  yesterday: { ...EMPTY_WINDOW },
+  mtd: { ...EMPTY_WINDOW },
 };
+
+// Deep-merge an API summary response against EMPTY_SUMMARY so that any
+// null / undefined window from the server never reaches the render layer.
+const mergeSummary = (raw: any) => ({
+  today: { ...EMPTY_WINDOW, ...(raw?.today ?? {}) },
+  yesterday: { ...EMPTY_WINDOW, ...(raw?.yesterday ?? {}) },
+  mtd: { ...EMPTY_WINDOW, ...(raw?.mtd ?? {}) },
+});
 
 export default function Dashboard() {
   const { user } = useAuth();
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
-  const [daily, setDaily] = useState<any[]>([]);
+  const [daily, setDaily] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -68,7 +79,7 @@ export default function Dashboard() {
           api.get("/api/reports/breakdown", { params: { groupBy: "date" } })
         ]);
         if (!active) return;
-        setSummary(s.data || EMPTY_SUMMARY);
+        setSummary(mergeSummary(s.data));
         setDaily((b.data && b.data.rows) || []);
       } catch (e) {
         console.error("Failed to load dashboard reports:", e);
@@ -86,34 +97,33 @@ export default function Dashboard() {
     summary.mtd.revenue === 0;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Top Controls */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-[#1e293b]">Dashboard</h2>
           <p className="text-sm text-[#64748b]">Performance overview across all channels (times in UTC).</p>
         </div>
-        <div className="flex items-center space-x-3">
-          <button className="btn-primary">
-            Actions <ChevronDown className="ml-2 w-4 h-4" />
-          </button>
-        </div>
+        <button className="btn-secondary flex items-center space-x-2">
+          <span>Actions</span>
+          <ChevronDown className="w-4 h-4" />
+        </button>
       </div>
 
       {loading ? (
-        <div className="panel flex items-center justify-center py-20 text-[#94a3b8] text-sm">
-          <Zap className="w-4 h-4 mr-2 animate-pulse" /> Loading performance data...
+        <div className="panel text-center py-12">
+          <div className="text-[#94a3b8] text-sm">Loading performance data...</div>
         </div>
       ) : allZero ? (
-        <div className="panel flex flex-col items-center justify-center py-20 text-center">
-          <BarChart3 className="w-10 h-10 text-[#cbd5e1] mb-4" />
-          <p className="text-sm font-bold text-[#1e293b] mb-1">No traffic yet</p>
-          <p className="text-xs text-[#64748b]">Create a campaign and send a test click to see live numbers here.</p>
+        <div className="panel text-center py-12">
+          <BarChart3 className="w-12 h-12 text-[#94a3b8] mx-auto mb-4" />
+          <h3 className="text-lg font-bold text-[#1e293b] mb-2">No traffic yet</h3>
+          <p className="text-sm text-[#64748b]">Create a campaign and send a test click to see live numbers here.</p>
         </div>
       ) : (
         <>
           {/* Main Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <StatCard label="REVENUE" icon={DollarSign} isCurrency
               today={summary.today.revenue} yesterday={summary.yesterday.revenue} mtd={summary.mtd.revenue} />
             <StatCard label="CONVERSIONS" icon={CheckCircle2}
@@ -125,42 +135,38 @@ export default function Dashboard() {
           </div>
 
           {/* Daily Data Table (last 7 days, UTC) */}
-          <div className="panel !p-0 overflow-hidden">
-            <div className="px-6 py-4 border-b border-[#e2e8f0] flex justify-between items-center bg-[#f8fafc]">
-              <h3 className="text-sm font-bold text-[#1e293b] uppercase tracking-wider">DAILY DATA (last 7 days, UTC)</h3>
-              <Link to="/reports" className="text-[#1ea4d9] text-xs font-bold hover:underline">View All</Link>
+          <div className="panel">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xs font-bold text-[#64748b] tracking-wider uppercase">DAILY DATA (last 7 days, UTC)</h3>
+              <Link to="/reports" className="text-xs font-bold text-[#1ea4d9] hover:underline">View All</Link>
             </div>
             <div className="overflow-x-auto">
-              <table className="trackier-table">
+              <table className="w-full text-xs">
                 <thead>
-                  <tr>
-                    <th className="text-left">DATE</th>
-                    <th className="text-center">CLICKS</th>
-                    <th className="text-center">CONVERSIONS</th>
-                    <th className="text-center">CR %</th>
-                    <th className="text-center">PAYOUT</th>
-                    <th className="text-center">REVENUE</th>
-                    <th className="text-center">PROFIT</th>
+                  <tr className="border-b border-[#f1f5f9]">
+                    <th className="text-left py-2 px-3 font-bold text-[#94a3b8] uppercase tracking-wider">DATE</th>
+                    <th className="text-center py-2 px-3 font-bold text-[#94a3b8] uppercase tracking-wider">CLICKS</th>
+                    <th className="text-center py-2 px-3 font-bold text-[#94a3b8] uppercase tracking-wider">CONVERSIONS</th>
+                    <th className="text-center py-2 px-3 font-bold text-[#94a3b8] uppercase tracking-wider">CR %</th>
+                    <th className="text-center py-2 px-3 font-bold text-[#94a3b8] uppercase tracking-wider">PAYOUT</th>
+                    <th className="text-center py-2 px-3 font-bold text-[#94a3b8] uppercase tracking-wider">REVENUE</th>
+                    <th className="text-center py-2 px-3 font-bold text-[#94a3b8] uppercase tracking-wider">PROFIT</th>
                   </tr>
                 </thead>
                 <tbody>
                   {daily.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="text-center py-10 text-[#94a3b8] text-sm italic">No daily activity in this window.</td>
-                    </tr>
-                  ) : daily.map((row, i) => (
-                    <tr key={i}>
-                      <td className="font-medium">{row.date}</td>
-                      <td className="text-center">
-                        <span className="bg-[#e0f2fe] text-[#0369a1] px-2 py-0.5 rounded text-[11px] font-bold">
-                          {row.clicks}
-                        </span>
+                    <tr><td colSpan={7} className="text-center py-8 text-[#94a3b8]">No data</td></tr>
+                  ) : daily.map((row: any, i: number) => (
+                    <tr key={i} className="border-b border-[#f8fafc] hover:bg-[#f8fafc]">
+                      <td className="py-2 px-3 font-medium text-[#1e293b]">{row.date}</td>
+                      <td className="text-center py-2 px-3">
+                        <span className="bg-[#e0f2fe] text-[#0369a1] px-2 py-0.5 rounded text-[11px] font-bold">{row.clicks}</span>
                       </td>
-                      <td className="text-center font-medium">{row.approved_conversions}</td>
-                      <td className="text-center text-[#64748b]">{(row.cr || 0).toFixed(2)}</td>
-                      <td className="text-center text-[#f97316] font-medium">{usd(row.payout)}</td>
-                      <td className="text-center text-[#16a34a] font-medium">{usd(row.revenue)}</td>
-                      <td className="text-center font-bold text-[#1e293b]">{usd(row.profit)}</td>
+                      <td className="text-center py-2 px-3">{row.approved_conversions}</td>
+                      <td className="text-center py-2 px-3">{(row.cr || 0).toFixed(2)}</td>
+                      <td className="text-center py-2 px-3">{usd(row.payout)}</td>
+                      <td className="text-center py-2 px-3">{usd(row.revenue)}</td>
+                      <td className="text-center py-2 px-3">{usd(row.profit)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -171,19 +177,18 @@ export default function Dashboard() {
       )}
 
       {/* AI Labs Link */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 panel flex items-center justify-between bg-gradient-to-r from-white to-[#f0f9ff] border-l-4 border-l-[#1ea4d9]">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-[#1ea4d9]/10 rounded-full flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-[#1ea4d9]" />
+      <div className="panel bg-gradient-to-r from-[#0f172a] to-[#1e293b] text-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center space-x-2 mb-2">
+              <Sparkles className="w-5 h-5 text-[#1ea4d9]" />
+              <h4 className="font-bold">Neural Intelligence Lab</h4>
             </div>
-            <div>
-              <h4 className="font-bold text-[#1e293b]">Neural Intelligence Lab</h4>
-              <p className="text-sm text-[#64748b]">AI-driven bid adjustments are currently optimizing your active campaigns.</p>
-            </div>
+            <p className="text-sm text-[#94a3b8]">AI-driven bid adjustments are currently optimizing your active campaigns.</p>
           </div>
-          <Link to="/ai-insights" className="btn-primary whitespace-nowrap">
-            Launch AI Lab
+          <Link to="/ai-insights" className="btn-primary flex items-center space-x-2">
+            <Zap className="w-4 h-4" />
+            <span>Launch AI Lab</span>
           </Link>
         </div>
       </div>
