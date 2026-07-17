@@ -446,13 +446,40 @@ function AppContent() {
     </Routes>
   );
 }
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean; error: Error | null}> {
+  constructor(props: {children: React.ReactNode}) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[ErrorBoundary]', error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:'#f5f7fa',padding:'2rem'}}>
+          <h1 style={{fontSize:'1.5rem',fontWeight:700,color:'#1e293b',marginBottom:'0.5rem'}}>Something went wrong</h1>
+          <p style={{color:'#64748b',marginBottom:'1.5rem'}}>{this.state.error?.message}</p>
+          <button onClick={()=>{ this.setState({hasError:false,error:null}); window.location.href='/'; }} style={{padding:'0.5rem 1.5rem',background:'#2563eb',color:'#fff',border:'none',borderRadius:'0.5rem',cursor:'pointer',fontWeight:600}}>Reload App</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 
 export default function App() {
   return (
-    <Router>
+<ErrorBoundary>
+          <Router>
       <AuthProvider>
         <AppContent />
       </AuthProvider>
     </Router>
+        </ErrorBoundary>
   );
 }
