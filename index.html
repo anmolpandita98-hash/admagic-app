@@ -3,11 +3,48 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Tell browsers and CDNs never to cache this shell -->
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <title>AdMagic</title>
+    <!--
+      Stale-cache self-healing:
+      If Cloudflare or a browser serves a stale index.html whose hashed JS/CSS
+      chunk URLs no longer exist on Vercel (404), the module script below will
+      fail to load and trigger window.onerror / unhandledrejection.  We detect
+      that once and force a hard bypass-cache reload so the fresh index.html
+      (and its correct chunk URLs) are fetched from origin.
+    -->
+    <script>
+      (function () {
+        var RELOAD_FLAG = '__admagic_reloaded';
+        function hardReload() {
+          if (sessionStorage.getItem(RELOAD_FLAG)) return; // avoid reload loop
+          sessionStorage.setItem(RELOAD_FLAG, '1');
+          // Append cache-buster query so Cloudflare fetches fresh copy from origin
+          var url = location.href.split('?')[0] + '?v=' + Date.now();
+          location.replace(url);
+        }
+        // Catch failed dynamic imports / missing chunks
+        window.addEventListener('error', function (e) {
+          var target = e.target || e.srcElement;
+          if (target && (target.tagName === 'SCRIPT' || target.tagName === 'LINK')) {
+            hardReload();
+          }
+        }, true);
+        // Catch top-level module-load rejections
+        window.addEventListener('unhandledrejection', function (e) {
+          var msg = e.reason && (e.reason.message || String(e.reason));
+          if (msg && (msg.indexOf('Failed to fetch') !== -1 || msg.indexOf('Load failed') !== -1 || msg.indexOf('404') !== -1)) {
+            hardReload();
+          }
+        });
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-
